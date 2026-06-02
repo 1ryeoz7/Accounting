@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追星族雙軌制周邊會計系統 v8.0 (終極旗艦版)</title>
+    <style>
+        :root {
+            --bg: #f5f6f8;
+            --card-bg: #ffffff;
+            --border-color: #dcdde1;
+            --text-main: #2f3640;
+            --text-sub: #718093;
+            --btn-gray: #7f8c8d;
+            --btn-hover: #636e72;
+            --dashboard-line-A: #2f3640;
+            --dashboard-line-B: #718093;
+            --loss: #c0392b;
+            --funding-bg: #e8ecef;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei"; background-color: var(--bg); color: var(--text-main); margin: 0; padding: 30px; line-height: 1.6; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; border-bottom: 2px solid var(--text-main); padding-bottom: 15px; }
+        .header-title h1 { margin: 0 0 5px 0; font-size: 1.8rem; font-weight: 700; letter-spacing: 0.5px; }
+        .header-title p { color: var(--text-sub); margin: 0; font-size: 13px; }
+        
+        /* 資本投入區塊 */
+        .funding-box { background: var(--funding-bg); padding: 12px 18px; border-radius: 8px; border: 1px dashed var(--text-sub); display: flex; align-items: center; gap: 10px; }
+        .funding-box label { font-size: 12px; font-weight: 600; color: var(--text-main); }
+        .funding-box input { padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; width: 100px; font-weight: bold; }
+        .funding-box button { padding: 6px 12px; background: var(--text-main); font-size: 12px; border-radius: 4px; }
+        
+        .top-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .top-dashboard { grid-template-columns: 1fr; }, header { flex-direction: column; align-items: flex-start; gap: 15px; } }
+        .dashboard-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        .dashboard-card::before { content: ''; position: absolute; top: 0; left: 0; width: 5px; height: 100%; }
+        .cash-wallet::before { background: var(--dashboard-line-A); }
+        .fv-wallet::before { background: var(--dashboard-line-B); }
+        .dashboard-card .title { font-size: 12px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.8px; }
+        .dashboard-card .value { font-size: 28px; font-weight: 700; margin: 6px 0; }
+        .dashboard-card .logic { font-size: 11px; color: var(--text-sub); background: #fafaf9; padding: 8px 12px; border-radius: 6px; border: 1px solid #edf2f7; }
+
+        .section-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 24px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .section-card h2 { margin-top: 0; font-size: 1.1rem; border-left: 4px solid var(--text-main); padding-left: 10px; margin-bottom: 20px; font-weight: 700; }
+        
+        .form-group { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .form-group input, .form-group select, .form-group button { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; background-color: #f8f9fa; color: var(--text-main); outline: none; }
+        .form-group input:focus, .form-group select:focus { background-color: #fff; border-color: var(--text-main); }
+        .form-group input[type="text"] { flex: 2; min-width: 180px; }
+        .form-group input[type="number"], .form-group select { flex: 1; min-width: 120px; }
+        button { background-color: var(--btn-gray); color: white; border: none; cursor: pointer; font-weight: 600; transition: 0.15s; }
+        button:hover { background-color: var(--btn-hover); }
+        
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #f0eee7; font-size: 13px; }
+        th { background-color: #fafaf9; color: var(--text-sub); font-weight: 700; font-size: 11px; border-bottom: 1px solid var(--border-color); }
+        
+        /* 狀態下拉選單（表格內） */
+        .status-select { padding: 4px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border-color); font-weight: 600; cursor: pointer; }
+        .status-collection { background: #eef2f5; color: #2f3640; }
+        .status-inventory { background: #fff5e6; color: #d35400; }
+        .status-prepaid { background: #e6f7ff; color: #0097e6; }
+        .status-expense { background: #fdf2f2; color: #c0392b; }
+        .status-sold { background: #2f3640; color: #fff; border-color: #2f3640; }
+        
+        .mv-input { width: 70px; padding: 4px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; text-align: right; }
+        .profit-text { color: var(--text-main); font-weight: bold; background: #f0f2f5; padding: 2px 6px; border-radius: 4px; }
+        .loss-text { color: var(--loss); font-weight: bold; background: #fdf2f2; padding: 2px 6px; border-radius: 4px; }
+        
+        .delete-btn { background-color: #f1f2f6; color: var(--text-sub); font-size: 11px; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-color); }
+        .delete-btn:hover { background-color: #e4e7eb; color: var(--loss); }
+        .note-input { width: 90%; padding: 6px; border: 1px solid transparent; background: transparent; font-size: 12px; border-radius: 4px; }
+        .note-input:hover { border-color: var(--border-color); background: #f8f9fa; }
+        .note-input:focus { background: #fff; border-color: var(--text-main); outline: none; }
+
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+        .fs-table { width: 100%; border-collapse: collapse; font-family: 'Courier New', Courier, monospace, "Microsoft JhengHei"; font-size: 12px; }
+        .fs-table th { background: transparent; border-bottom: 2px solid var(--text-main); padding: 8px 4px; text-transform: uppercase; font-size: 13px; color: var(--text-main); }
+        .fs-table td { padding: 8px 4px; border-bottom: 1px dashed #e1e2e6; }
+        .fs-table .indent { padding-left: 15px; color: var(--text-sub); }
+        .fs-table .total-row td { font-weight: bold; border-top: 1px solid var(--text-main); border-bottom: 3px double var(--text-main); color: var(--text-main); }
+        .fs-table .sub-total td { font-weight: bold; border-top: 1px solid var(--border-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <h1>追星族周邊會計系統</h1>
+            <p>資本注資 ✕ 收藏品分流 ✕ 門票生命週期 ✕ 財報自動結算</p>
+        </div>
+        <div class="funding-box">
+            <label>📥 提撥追星基金<br>(資本投入)</label>
+            <input type="number" id="fundInput" placeholder="輸入金額" min="0">
+            <button onclick="addFunding()">注入現金池</button>
+        </div>
+    </header>
+
+    <div class="top-dashboard">
+        <div class="dashboard-card cash-wallet">
+            <div class="title">💰純現金流錢包 (Cash Position)</div>
+            <div class="value" id="cashWalletValue">NT$ 0</div>
+            <div class="logic">
+                <strong>會計核心：</strong>不赤字法則。公式：Σ(注入基金) + Σ(賣出回收現金) - Σ(所有歷史購入總支出)。
+            </div>
+        </div>
+
+        <div class="dashboard-card fv-wallet">
+            <div class="title">📈公允價值總資產 (Fair Value Net Worth)</div>
+            <div class="value" id="fvWalletValue">NT$ 0</div>
+            <div class="logic">
+                <strong>會計核心：</strong>公式：純現金錢包 + 收藏品市價 + 待轉賣存貨市價 + 預付門票價值。（已看門票自動歸零不計入）。
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h2>➕ 新增原始交易紀錄</h2>
+        <div class="form-group">
+            <input type="text" id="itemName" placeholder="物品名稱（如：手燈、演唱會票）" required>
+            <select id="itemStatus">
+                <option value="收藏">📦 周邊 - 永久收藏 (自留)</option>
+                <option value="待轉賣">🛒 周邊 - 待轉賣 (存貨)</option>
+                <option value="待看">🎫 門票 - 待看/預付</option>
+                <option value="票轉賣">📈 門票 - 待轉賣 (存貨)</option>
+            </select>
+            <input type="number" id="itemCost" placeholder="購入成本 (NT$)" min="0">
+            <input type="number" id="itemMV" placeholder="目前市價 (NT$)" min="0">
+            <input type="text" id="itemNote" placeholder="自訂備註 Note">
+            <button onclick="addItem()">登錄至資料庫</button>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h2>📜 總分類帳與保存庫 (General Ledger)</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 18%;">物品名稱</th>
+                        <th style="width: 18%;">會計狀態 (可直接下拉修改)</th>
+                        <th style="width: 10%;">歷史成本</th>
+                        <th style="width: 12%;">目前市價 / 實售價<br>(可直接修改)</th>
+                        <th style="width: 12%;">實質/未實現 損益</th>
+                        <th style="width: 18%;">備註 (點擊修改)</th>
+                        <th style="width: 8%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="itemTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section-card" style="background: #fafaf9;">
+        <h2>📊 年度自動化財務報表 (Financial Statements)</h2>
+        <div class="report-grid">
+            <div>
+                <table class="fs-table">
+                    <thead><tr><th colspan="2">資產負債表 (Balance Sheet)</th></tr></thead>
+                    <tbody id="bsBody"></tbody>
+                </table>
+            </div>
+            <div>
+                <table class="fs-table">
+                    <thead><tr><th colspan="2">綜合損益表 (Income Statement)</th></tr></thead>
+                    <tbody id="isBody"></tbody>
+                </table>
+            </div>
+            <div>
+                <table class="fs-table">
+                    <thead><tr><th colspan="2">現金流量表 (Cash Flow Statement)</th></tr></thead>
+                    <tbody id="cfBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let items = JSON.parse(localStorage.getItem('star_v8_items')) || [];
+    let totalFunding = Number(localStorage.getItem('star_v8_funding')) || 0;
+
+    function saveToStorage() { 
+        localStorage.setItem('star_v8_items', JSON.stringify(items)); 
+        localStorage.setItem('star_v8_funding', totalFunding);
+    }
+
+    function addFunding() {
+        const amt = Number(document.getElementById('fundInput').value);
+        if(amt > 0) {
+            totalFunding += amt;
+            saveToStorage();
+            calculateFinance();
+            document.getElementById('fundInput').value = '';
+            alert(`✅ 成功注入追星基金 NT$ ${amt}！\n(會計分錄：借現金，貸投入資本)`);
+        }
+    }
+
+    function addItem() {
+        const name = document.getElementById('itemName').value;
+        const status = document.getElementById('itemStatus').value;
+        const cost = Number(document.getElementById('itemCost').value) || 0;
+        const mv = Number(document.getElementById('itemMV').value) || 0;
+        const note = document.getElementById('itemNote').value;
+
+        if (!name) return alert("請輸入物品名稱！");
+
+        items.push({ id: Date.now(), name, status, cost, mv, note });
+        saveToStorage(); renderTable(); calculateFinance();
+        
+        document.getElementById('itemName').value = ''; document.getElementById('itemCost').value = '';
+        document.getElementById('itemMV').value = ''; document.getElementById('itemNote').value = '';
+    }
+
+    // 🌟 核心互動：直接在表格內修改狀態與市價
+    function changeStatus(id, newStatus) {
+        const idx = items.findIndex(i => i.id === id);
+        if (idx !== -1) {
+            items[idx].status = newStatus;
+            
+            // 門票專屬防呆邏輯：已看/失效 -> 價值歸零 (認列費用)
+            if(newStatus === '已看') {
+                items[idx].mv = 0;
+                alert("🎟️ 演唱會結束！門票殘值歸零，已轉列為【當期娛樂費用】。");
+            }
+            // 賣出邏輯：彈窗詢問賣多少
+            else if(newStatus === '賣出') {
+                let sellPrice = prompt("💰 請輸入實際賣出的成交價格：", items[idx].mv);
+                if(sellPrice !== null) {
+                    items[idx].mv = Number(sellPrice);
+                } else {
+                    return renderTable(); // 取消則重置畫面
+                }
+            }
+            saveToStorage(); renderTable(); calculateFinance();
+        }
+    }
+
+    function changeMV(id, newMV) {
+        const idx = items.findIndex(i => i.id === id);
+        if (idx !== -1) {
+            items[idx].mv = Number(newMV);
+            saveToStorage(); calculateFinance(); renderTable();
+        }
+    }
+
+    function updateNote(id, val) {
+        const idx = items.findIndex(i => i.id === id);
+        if (idx !== -1) { items[idx].note = val; saveToStorage(); }
+    }
+
+    function deleteItem(id) {
+        items = items.filter(item => item.id !== id);
+        saveToStorage(); renderTable(); calculateFinance();
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('itemTableBody');
+        tbody.innerHTML = '';
+        if(items.length === 0) return tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-sub);">目前資料庫內尚無明細紀錄。</td></tr>`;
+
+        items.forEach(item => {
+            let diffText = '-', diffClass = '';
+            
+            // 決定下拉選單的顏色 Class
+            let selectClass = 'status-select ';
+            if(item.status === '收藏') selectClass += 'status-collection';
+            else if(item.status === '待轉賣' || item.status === '票轉賣') selectClass += 'status-inventory';
+            else if(item.status === '待看') selectClass += 'status-prepaid';
+            else if(item.status === '已看') selectClass += 'status-expense';
+            else if(item.status === '賣出') selectClass += 'status-sold';
+
+            // 組合狀態下拉選單 HTML
+            let statusHtml = `
+                <select class="${selectClass}" onchange="changeStatus(${item.id}, this.value)">
+                    <option value="收藏" ${item.status==='收藏'?'selected':''}>📦 周邊-永久收藏</option>
+                    <option value="待轉賣" ${item.status==='待轉賣'?'selected':''}>🛒 周邊-待轉賣</option>
+                    <option value="待看" ${item.status==='待看'?'selected':''}>🎫 門票-待看預付</option>
+                    <option value="票轉賣" ${item.status==='票轉賣'?'selected':''}>📈 門票-待轉賣</option>
+                    <option value="已看" ${item.status==='已看'?'selected':''}>🗑️ 門票-已看費用</option>
+                    <option value="賣出" ${item.status==='賣出'?'selected':''}>✅ 已賣出回血</option>
+                </select>
+            `;
+
+            // 市價輸入框與損益計算
+            let mvHtml = '';
+            if (item.status === '賣出') {
+                mvHtml = `NT$ ${item.mv} (成交)`;
+                let diff = item.mv - item.cost;
+                diffText = diff >= 0 ? `賺 ＋NT$ ${diff}` : `虧 －NT$ ${Math.abs(diff)}`;
+                diffClass = diff >= 0 ? 'profit-text' : 'loss-text';
+            } else if (item.status === '已看') {
+                mvHtml = `NT$ 0 (失效)`;
+                diffText = `費用 －NT$ ${item.cost}`;
+                diffClass = 'loss-text';
+            } else {
+                // 持有狀態，可自由修改市價，並顯示未實現損益
+                mvHtml = `NT$ <input type="number" class="mv-input" value="${item.mv}" onchange="changeMV(${item.id}, this.value)">`;
+                let diff = item.mv - item.cost;
+                if(diff !== 0) {
+                    diffText = diff > 0 ? `浮盈 ＋NT$ ${diff}` : `浮虧 －NT$ ${Math.abs(diff)}`;
+                    diffClass = diff > 0 ? 'profit-text' : 'loss-text';
+                } else { diffText = '-'; }
+            }
+
+            tbody.innerHTML += `<tr>
+                <td><strong>${item.name}</strong></td>
+                <td>${statusHtml}</td>
+                <td>NT$ ${item.cost}</td>
+                <td>${mvHtml}</td>
+                <td class="${diffClass}">${diffText}</td>
+                <td><input type="text" class="note-input" value="${item.note || ''}" placeholder="輸入備註..." onchange="updateNote(${item.id}, this.value)"></td>
+                <td><button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button></td>
+            </tr>`;
+        });
+    }
+
+    function calculateFinance() {
+        let totalPurchases = 0;   
+        let totalSales = 0;  
+        
+        let mvCollection = 0, costCollection = 0;
+        let mvInventory = 0, costInventory = 0;
+        let mvPrepaid = 0;
+        let cogs = 0;       // 已售商品成本
+        let expense = 0;    // 已看門票費用
+
+        items.forEach(item => {
+            totalPurchases += item.cost; // 只要買了錢就花出去了
+            
+            if (item.status === '收藏') { mvCollection += item.mv; costCollection += item.cost; }
+            else if (item.status === '待轉賣' || item.status === '票轉賣') { mvInventory += item.mv; costInventory += item.cost; }
+            else if (item.status === '待看') { mvPrepaid += item.mv; }
+            else if (item.status === '賣出') { totalSales += item.mv; cogs += item.cost; }
+            else if (item.status === '已看') { expense += item.cost; } // 市價已被歸零，認列為費用
+        });
+
+        // --- 儀表板運算 ---
+        let cashWallet = totalFunding + totalSales - totalPurchases;
+        let fvWallet = cashWallet + mvCollection + mvInventory + mvPrepaid;
+        
+        document.getElementById('cashWalletValue').innerText = `NT$ ${cashWallet.toLocaleString()}`;
+        document.getElementById('fvWalletValue').innerText = `NT$ ${fvWallet.toLocaleString()}`;
+        document.getElementById('cashWalletValue').style.color = cashWallet >= 0 ? "var(--text-main)" : "var(--loss)";
+        document.getElementById('fvWalletValue').style.color = fvWallet >= 0 ? "var(--text-main)" : "var(--loss)";
+
+        // ==========================================
+        // 📊 自動生成三大財務報表邏輯
+        // ==========================================
+        
+        // 1. 資產負債表 (Balance Sheet)
+        let displayCash = cashWallet >= 0 ? cashWallet : 0; 
+        let overdraft = cashWallet < 0 ? Math.abs(cashWallet) : 0; 
+        let totalAssets = displayCash + mvCollection + mvInventory + mvPrepaid;
+        let totalLiabilities = overdraft;
+        let totalEquity = totalAssets - totalLiabilities; // 恆等式
+
+        document.getElementById('bsBody').innerHTML = `
+            <tr><td colspan="2"><strong>流動資產 (Current Assets)</strong></td></tr>
+            <tr><td class="indent">現金及約當現金</td><td style="text-align:right;">${displayCash}</td></tr>
+            <tr><td class="indent">待轉賣存貨 (周邊與門票)</td><td style="text-align:right;">${mvInventory}</td></tr>
+            <tr><td class="indent">預付費用 (待看門票)</td><td style="text-align:right;">${mvPrepaid}</td></tr>
+            <tr><td colspan="2"><strong>非流動資產 (Non-Current Assets)</strong></td></tr>
+            <tr><td class="indent">永久收藏品設備</td><td style="text-align:right;">${mvCollection}</td></tr>
+            <tr class="sub-total"><td>資產總計</td><td style="text-align:right;">${totalAssets}</td></tr>
+            
+            <tr><td colspan="2"><strong>負債 (Liabilities)</strong></td></tr>
+            <tr><td class="indent">短期透支 (墊款)</td><td style="text-align:right;">${overdraft}</td></tr>
+            <tr class="sub-total"><td>負債總計</td><td style="text-align:right;">${totalLiabilities}</td></tr>
+            
+            <tr><td colspan="2"><strong>權益 (Equity)</strong></td></tr>
+            <tr><td class="indent">投入資本 (追星基金)</td><td style="text-align:right;">${totalFunding}</td></tr>
+            <tr><td class="indent">保留盈餘 (累積盈虧)</td><td style="text-align:right; color:${(totalEquity-totalFunding)>=0?'#2f3640':'var(--loss)'};">${totalEquity - totalFunding}</td></tr>
+            
+            <tr class="total-row"><td>負債及權益總計</td><td style="text-align:right;">${totalLiabilities + totalEquity}</td></tr>
+        `;
+
+        // 2. 綜合損益表 (Income Statement)
+        let realizedProfit = totalSales - cogs; 
+        let unrealizedProfit = (mvInventory - costInventory) + (mvCollection - costCollection); // 收藏與存貨的浮動漲跌
+        let netIncome = realizedProfit - expense + unrealizedProfit;
+
+        document.getElementById('isBody').innerHTML = `
+            <tr><td colspan="2"><strong>已實現營業損益 (Realized)</strong></td></tr>
+            <tr><td class="indent">處分資產收入</td><td style="text-align:right;">${totalSales}</td></tr>
+            <tr><td class="indent">銷貨成本 (COGS)</td><td style="text-align:right;">(${cogs})</td></tr>
+            <tr><td class="indent">娛樂消費費用 (已看門票)</td><td style="text-align:right; color:var(--loss);">(${expense})</td></tr>
+            <tr class="sub-total"><td>已實現營業淨利</td><td style="text-align:right; color:${(realizedProfit-expense)>=0?'#2f3640':'var(--loss)'};">${realizedProfit - expense}</td></tr>
+            
+            <tr><td colspan="2"><strong>未實現評價損益 (Unrealized)</strong></td></tr>
+            <tr><td class="indent">資產評價利益 / (損失)</td><td style="text-align:right; color:${unrealizedProfit>=0?'#2f3640':'var(--loss)'};">${unrealizedProfit}</td></tr>
+            
+            <tr class="total-row"><td>本期綜合淨利 (Net Income)</td><td style="text-align:right; color:${netIncome>=0?'#2f3640':'var(--loss)'};">${netIncome}</td></tr>
+        `;
+
+        // 3. 現金流量表 (Cash Flow Statement) 
+        document.getElementById('cfBody').innerHTML = `
+            <tr><td colspan="2"><strong>籌資活動 (Financing)</strong></td></tr>
+            <tr><td class="indent">股東投入資本 (注入基金)</td><td style="text-align:right;">${totalFunding}</td></tr>
+            <tr><td colspan="2"><strong>營業活動 (Operating)</strong></td></tr>
+            <tr><td class="indent">出售資產收取之現金</td><td style="text-align:right;">${totalSales}</td></tr>
+            <tr><td class="indent">購入資產/門票支付之現金</td><td style="text-align:right; color:var(--loss);">(${totalPurchases})</td></tr>
+            
+            <tr class="total-row"><td>期末現金餘額</td><td style="text-align:right; color:${cashWallet>=0?'#2f3640':'var(--loss)'};">${cashWallet}</td></tr>
+        `;
+    }
+
+    renderTable(); calculateFinance();
+</script>
+
+</body>
+</html>
